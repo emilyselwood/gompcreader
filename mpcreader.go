@@ -167,7 +167,6 @@ func readPackedInt(buffer []byte, start int, end int) int64 {
 			}
 		}
 
-
 		var working = localBuffer[0]
 		if working >= 'a' && working <= 'z' {
 			result = result + (int64(working-'a'+36) * decimal)
@@ -200,7 +199,7 @@ func readPackedIdentifier(buffer []byte, start int, end int) string {
 	} else if buffer[start+2] >= '0' && buffer[start+2] <= '9' {
 		result := strconv.FormatInt(readPackedInt(buffer, start, start+3), 10) + " " + string(buffer[start+3]) + string(buffer[start+6])
 		number := readPackedInt(buffer, start+4, start+6)
-		if number > 0  {
+		if number > 0 {
 			return result + strconv.FormatInt(number, 10)
 		}
 		return result
@@ -299,7 +298,7 @@ func main() {
 		panic(err)
 	}
 
-  var count int64 = 0
+	var count int64 = 0
 	result, err := mpcReader.ReadEntry()
 	for err == nil {
 		fmt.Println(result.Id + ":" + result.ReadableDesignation)
