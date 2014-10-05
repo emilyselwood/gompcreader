@@ -104,9 +104,13 @@ func (reader *MpcReader) ReadEntry() (*MinorPlanet, error) {
 /*
 Takes a chunk of the buffer and returns it as a string
 */
-func readString(buffer []byte, start int, end int) string {
-	s := string(buffer[start:end])
-	return strings.Trim(s, " ")
+func readString(buffer []byte) string {
+	s := string(buffer)
+	return strings.TrimFunc(s, cutSec)
+}
+
+func cutSec(input rune) bool {
+	return input == ' '
 }
 
 /*
@@ -114,8 +118,8 @@ Takes a chunk of the buffer and reads it as a float
 
 Note returns zero on error. This may not be ideal.
 */
-func readFloat(buffer []byte, start int, end int) float64 {
-	s := readString(buffer, start, end)
+func readFloat(buffer []byte) float64 {
+	s := readString(buffer)
 	result, error := strconv.ParseFloat(s, 64)
 	if error == nil {
 		return result
@@ -123,8 +127,8 @@ func readFloat(buffer []byte, start int, end int) float64 {
 	return 0.0
 }
 
-func readInt(buffer []byte, start int, end int) int64 {
-	s := readString(buffer, start, end)
+func readInt(buffer []byte) int64 {
+	s := readString(buffer)
 	result, error := strconv.ParseInt(s, 10, 64)
 	if error == nil {
 		return result
@@ -132,8 +136,8 @@ func readInt(buffer []byte, start int, end int) int64 {
 	return 0
 }
 
-func readHexInt(buffer []byte, start int, end int) int64 {
-	s := readString(buffer, start, end)
+func readHexInt(buffer []byte) int64 {
+	s := readString(buffer)
 	result, error := strconv.ParseInt(s, 16, 64)
 	if error == nil {
 		return result
@@ -141,8 +145,8 @@ func readHexInt(buffer []byte, start int, end int) int64 {
 	return 0
 }
 
-func readTime(buffer []byte, start int, end int) time.Time {
-	s := readString(buffer, start, end)
+func readTime(buffer []byte) time.Time {
+	s := readString(buffer)
 	t, _ := time.Parse("20060102", s)
 	return t
 }
@@ -153,10 +157,10 @@ Reads a packed int from the buffer
 Packed ints encode the most significant digit using 0-9A-Za-z to cover 0 to 62
 This is used as a base for the packed identifier and the packed date.
 */
-func readPackedInt(buffer []byte, start int, end int) int64 {
+func readPackedInt(buffer []byte) int64 {
 	var result int64 = 0
 	var decimal int64 = 1
-	var localBuffer = readString(buffer, start, end)
+	var localBuffer = readString(buffer)
 	if len(localBuffer) > 0 {
 
 		for i := len(localBuffer) - 1; i > 0; i = i - 1 {
@@ -193,29 +197,29 @@ positions 3 and 6, position 5 can be ignored.
 The third starts with a two character code and has a packed int on the end.
 These should be swapped around to build the final identifier.
 */
-func readPackedIdentifier(buffer []byte, start int, end int) string {
-	if onlyNumbers(buffer, start+1, end) {
-		return strconv.FormatInt(readPackedInt(buffer, start, end), 10)
-	} else if buffer[start+2] >= '0' && buffer[start+2] <= '9' {
-		result := strconv.FormatInt(readPackedInt(buffer, start, start+3), 10) + " " + string(buffer[start+3]) + string(buffer[start+6])
-		number := readPackedInt(buffer, start+4, start+6)
+func readPackedIdentifier(buffer []byte) string {
+	if onlyNumbers(buffer[1:]) {
+		return strconv.FormatInt(readPackedInt(buffer), 10)
+	} else if buffer[2] >= '0' && buffer[2] <= '9' {
+		result := strconv.FormatInt(readPackedInt(buffer[0:3]), 10) + " " + string(buffer[3]) + string(buffer[6])
+		number := readPackedInt(buffer[4:6])
 		if number > 0 {
 			return result + strconv.FormatInt(number, 10)
 		}
 		return result
 	} else {
-		number := readPackedInt(buffer, start+3, start+7)
-		return strconv.FormatInt(number, 10) + " " + string(buffer[start]) + "-" + string(buffer[start+1])
+		number := readPackedInt(buffer[3:7])
+		return strconv.FormatInt(number, 10) + " " + string(buffer[0]) + "-" + string(buffer[1])
 	}
 }
 
 /*
 Packed time fields are simply three packed int representing year, month and day
 */
-func readPackedTime(buffer []byte, start int, end int) time.Time {
-	year := int(readPackedInt(buffer, start, start+3))
-	month := int(readPackedInt(buffer, start+3, start+4))
-	day := int(readPackedInt(buffer, start+4, start+5))
+func readPackedTime(buffer []byte) time.Time {
+	year := int(readPackedInt(buffer[0:3]))
+	month := int(readPackedInt(buffer[3:4]))
+	day := int(readPackedInt(buffer[4:5]))
 	return time.Date(year, time.Month(month), day, 0, 0, 0, 0, time.UTC)
 }
 
@@ -223,9 +227,9 @@ func readPackedTime(buffer []byte, start int, end int) time.Time {
 Helper function to check if a section of the buffer only contains numbers and
 spaces. Used for decoding packed ints.
 */
-func onlyNumbers(buffer []byte, start int, end int) bool {
-	for i := start; i < end; i = i + 1 {
-		if buffer[i] != ' ' && (buffer[i] < '0' || buffer[i] > '9') {
+func onlyNumbers(buffer []byte) bool {
+	for _, v := range buffer {
+		if v != ' ' && (v < '0' || v > '9') {
 			return false
 		}
 	}
@@ -258,29 +262,29 @@ populates. The MinorPlanet struct
 func convertToMinorPlanet(buffer []byte) *MinorPlanet {
 	var result = new(MinorPlanet)
 
-	result.Id = readPackedIdentifier(buffer, 0, 6)
-	result.AbsoluteMagnitude = readFloat(buffer, 8, 13)
-	result.Slope = readFloat(buffer, 14, 19)
-	result.Epoch = readPackedTime(buffer, 20, 25)
-	result.MeanAnomalyEpoch = readFloat(buffer, 26, 35)
-	result.ArgumentOfPerihelion = readFloat(buffer, 37, 47)
-	result.LongitudeOfTheAscendingNode = readFloat(buffer, 48, 57)
-	result.InclinationToTheEcliptic = readFloat(buffer, 59, 68)
-	result.OrbitalEccentricity = readFloat(buffer, 70, 79)
-	result.MeanDailyMotion = readFloat(buffer, 80, 91)
-	result.SemimajorAxis = readFloat(buffer, 92, 103)
-	result.UncertaintyParameter = readString(buffer, 105, 106)
-	result.Reference = readString(buffer, 107, 116)
-	result.NumberOfObservations = readInt(buffer, 117, 122)
-	result.NumberOfOppositions = readInt(buffer, 123, 126)
+	result.Id = readPackedIdentifier(buffer[0:7])
+	result.AbsoluteMagnitude = readFloat(buffer[8:13])
+	result.Slope = readFloat(buffer[14:19])
+	result.Epoch = readPackedTime(buffer[20:25])
+	result.MeanAnomalyEpoch = readFloat(buffer[26:35])
+	result.ArgumentOfPerihelion = readFloat(buffer[37:47])
+	result.LongitudeOfTheAscendingNode = readFloat(buffer[8:57])
+	result.InclinationToTheEcliptic = readFloat(buffer[59:68])
+	result.OrbitalEccentricity = readFloat(buffer[70:79])
+	result.MeanDailyMotion = readFloat(buffer[80:91])
+	result.SemimajorAxis = readFloat(buffer[92:103])
+	result.UncertaintyParameter = readString(buffer[105:106])
+	result.Reference = readString(buffer[107:116])
+	result.NumberOfObservations = readInt(buffer[117:122])
+	result.NumberOfOppositions = readInt(buffer[123:126])
 	// ignore opposition for a second.
-	result.RMSResidual = readFloat(buffer, 137, 141)
-	result.CoarseIndicatorOfPerturbers = readString(buffer, 142, 145)
-	result.PreciseIndicatorOfPerturbers = readString(buffer, 146, 149)
-	result.ComputerName = readString(buffer, 150, 160)
-	result.HexDigitFlags = readHexInt(buffer, 161, 165)
-	result.ReadableDesignation = readString(buffer, 166, 194)
-	result.DateOfLastObservation = readTime(buffer, 194, 202)
+	result.RMSResidual = readFloat(buffer[137:141])
+	result.CoarseIndicatorOfPerturbers = readString(buffer[142:145])
+	result.PreciseIndicatorOfPerturbers = readString(buffer[146:149])
+	result.ComputerName = readString(buffer[150:160])
+	result.HexDigitFlags = readHexInt(buffer[161:165])
+	result.ReadableDesignation = readString(buffer[166:194])
+	result.DateOfLastObservation = readTime(buffer[194:202])
 
 	// optional parts depending on number of observations.
 	//result.yearOfFirstObservation = readInt(buffer, xxx, yyy)
