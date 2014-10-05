@@ -6,6 +6,8 @@ Simple Go library to read the minor planet center data files.
 
 The go docs should be reasonable. If some thing doesn't seem to work please raise a bug.
 
+The expected input files can be obtained here: http://www.minorplanetcenter.net/iau/MPCORB.html
+
 ## Example ##
 
 ```
