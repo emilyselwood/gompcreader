@@ -19,12 +19,12 @@ package gompcreader
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"io"
 	"os"
 	"strconv"
 	"strings"
-	"bytes"
 	"time"
 )
 
@@ -104,7 +104,7 @@ func (reader *MpcReader) ReadEntry() (*MinorPlanet, error) {
 	return result, nil
 }
 
-func (reader * MpcReader) Close() {
+func (reader *MpcReader) Close() {
 	reader.F.Close()
 }
 

@@ -17,7 +17,7 @@ func TestReadFloat(t *testing.T) {
 	buffer := "12.8567 "
 	var result = readFloat(buffer)
 	if result != 12.8567 {
-		t.Errorf("readFloat = %d, want %d", result, 12.8567)
+		t.Errorf("readFloat = %f, want %f", result, 12.8567)
 	}
 }
 
