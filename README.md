@@ -16,7 +16,6 @@ package main
 import (
   "fmt"
   "io"
-  "strconv"
   "flag"
   "log"
   "github.com/wselwood/gompcreader"

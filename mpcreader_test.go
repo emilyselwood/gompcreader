@@ -6,15 +6,15 @@ import (
 )
 
 func TestReadString(t *testing.T) {
-	buffer := []byte(" fish and chips ")
+	buffer := []byte("fish and chips ")
 	var result = readString(buffer)
 	if result != "fish and chips" {
-		t.Errorf("readString = %s, want \" fish and chips \"", result)
+		t.Errorf("readString = %s, want \"fish and chips\"", result)
 	}
 }
 
 func TestReadFloat(t *testing.T) {
-	buffer := []byte(" 12.8567 ")
+	buffer := []byte("12.8567 ")
 	var result = readFloat(buffer)
 	if result != 12.8567 {
 		t.Errorf("readFloat = %d, want %d", result, 12.8567)
@@ -22,7 +22,7 @@ func TestReadFloat(t *testing.T) {
 }
 
 func TestReadInt(t *testing.T) {
-	buffer := []byte(" 128 ")
+	buffer := []byte("128 ")
 	var result = readInt(buffer)
 	if result != 128 {
 		t.Errorf("readInt = %d, want %d", result, 128)
@@ -30,7 +30,7 @@ func TestReadInt(t *testing.T) {
 }
 
 func TestReadPackedInt(t *testing.T) {
-	buffer := []byte(" a128 ")
+	buffer := []byte("a128 ")
 	var result = readPackedInt(buffer)
 	if result != 36128 {
 		t.Errorf("readInt = %d, want %d", result, 36128)

@@ -24,6 +24,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"bytes"
 	"time"
 )
 
@@ -68,11 +69,12 @@ error indicating what went wrong.
 */
 func NewMpcReader(filePath string) (*MpcReader, error) {
 	var reader *MpcReader = new(MpcReader)
-	file, err := os.Open(filePath)
+	var err error
+	reader.F, err = os.Open(filePath)
 	if err != nil {
 		return nil, err
 	}
-	reader.F = bufio.NewReader(file)
+	reader.S = bufio.NewScanner(reader.F)
 	return reader, nil
 
 }
@@ -82,7 +84,8 @@ Simple wrapper around a bufio.Reader used to read the file. Should be constructe
 using NewMpcReader(string)
 */
 type MpcReader struct {
-	F *bufio.Reader
+	F *os.File
+	S *bufio.Scanner
 }
 
 /*
@@ -101,12 +104,15 @@ func (reader *MpcReader) ReadEntry() (*MinorPlanet, error) {
 	return result, nil
 }
 
+func (reader * MpcReader) Close() {
+	reader.F.Close()
+}
+
 /*
 Takes a chunk of the buffer and returns it as a string
 */
-func readString(buffer []byte) string {
-	s := string(buffer)
-	return strings.TrimFunc(s, cutSec)
+func readString(buffer string) string {
+	return strings.TrimFunc(buffer, cutSec)
 }
 
 func cutSec(input rune) bool {
@@ -118,7 +124,7 @@ Takes a chunk of the buffer and reads it as a float
 
 Note returns zero on error. This may not be ideal.
 */
-func readFloat(buffer []byte) float64 {
+func readFloat(buffer string) float64 {
 	s := readString(buffer)
 	result, error := strconv.ParseFloat(s, 64)
 	if error == nil {
@@ -127,7 +133,7 @@ func readFloat(buffer []byte) float64 {
 	return 0.0
 }
 
-func readInt(buffer []byte) int64 {
+func readInt(buffer string) int64 {
 	s := readString(buffer)
 	result, error := strconv.ParseInt(s, 10, 64)
 	if error == nil {
@@ -136,7 +142,7 @@ func readInt(buffer []byte) int64 {
 	return 0
 }
 
-func readHexInt(buffer []byte) int64 {
+func readHexInt(buffer string) int64 {
 	s := readString(buffer)
 	result, error := strconv.ParseInt(s, 16, 64)
 	if error == nil {
@@ -145,7 +151,7 @@ func readHexInt(buffer []byte) int64 {
 	return 0
 }
 
-func readTime(buffer []byte) time.Time {
+func readTime(buffer string) time.Time {
 	s := readString(buffer)
 	t, _ := time.Parse("20060102", s)
 	return t
@@ -157,10 +163,10 @@ Reads a packed int from the buffer
 Packed ints encode the most significant digit using 0-9A-Za-z to cover 0 to 62
 This is used as a base for the packed identifier and the packed date.
 */
-func readPackedInt(buffer []byte) int64 {
+func readPackedInt(buffer string) int64 {
 	var result int64 = 0
 	var decimal int64 = 1
-	var localBuffer = readString(buffer)
+	var localBuffer = strings.TrimFunc(buffer, cutSec)
 	if len(localBuffer) > 0 {
 
 		for i := len(localBuffer) - 1; i > 0; i = i - 1 {
@@ -197,26 +203,37 @@ positions 3 and 6, position 5 can be ignored.
 The third starts with a two character code and has a packed int on the end.
 These should be swapped around to build the final identifier.
 */
-func readPackedIdentifier(buffer []byte) string {
+func readPackedIdentifier(buffer string) string {
 	if onlyNumbers(buffer[1:]) {
 		return strconv.FormatInt(readPackedInt(buffer), 10)
 	} else if buffer[2] >= '0' && buffer[2] <= '9' {
-		result := strconv.FormatInt(readPackedInt(buffer[0:3]), 10) + " " + string(buffer[3]) + string(buffer[6])
+		var output bytes.Buffer
+		output.WriteString(strconv.FormatInt(readPackedInt(buffer[0:3]), 10))
+		output.WriteRune(' ')
+		output.WriteByte(buffer[3])
+		output.WriteByte(buffer[6])
+		//result := fmt.Sprintf("%d %c%c", readPackedInt(buffer[0:3]), buffer[3], buffer[6]) //strconv.FormatInt(, 10) + " " + string(buffer[3]) + string(buffer[6])
 		number := readPackedInt(buffer[4:6])
 		if number > 0 {
-			return result + strconv.FormatInt(number, 10)
+			output.WriteString(strconv.FormatInt(number, 10))
 		}
-		return result
+		return output.String()
 	} else {
-		number := readPackedInt(buffer[3:7])
-		return strconv.FormatInt(number, 10) + " " + string(buffer[0]) + "-" + string(buffer[1])
+		var output bytes.Buffer
+		output.WriteString(strconv.FormatInt(readPackedInt(buffer[3:7]), 10))
+		output.WriteRune(' ')
+		output.WriteByte(buffer[0])
+		output.WriteRune('-')
+		output.WriteByte(buffer[1])
+		return output.String()
+		//fmt.Sprintf("%d %c-%c", number, buffer[0], buffer[1]) //strconv.FormatInt(number, 10) + " " + rune(buffer[0]) + "-" + rune(buffer[1])
 	}
 }
 
 /*
 Packed time fields are simply three packed int representing year, month and day
 */
-func readPackedTime(buffer []byte) time.Time {
+func readPackedTime(buffer string) time.Time {
 	year := int(readPackedInt(buffer[0:3]))
 	month := int(readPackedInt(buffer[3:4]))
 	day := int(readPackedInt(buffer[4:5]))
@@ -227,7 +244,7 @@ func readPackedTime(buffer []byte) time.Time {
 Helper function to check if a section of the buffer only contains numbers and
 spaces. Used for decoding packed ints.
 */
-func onlyNumbers(buffer []byte) bool {
+func onlyNumbers(buffer string) bool {
 	for _, v := range buffer {
 		if v != ' ' && (v < '0' || v > '9') {
 			return false
@@ -243,13 +260,20 @@ It will keep reading more lines until it finds one that is 203 characters long
 
 If it gets to the end of the file it will return io.EOF for error
 */
-func (reader *MpcReader) findLine() ([]byte, error) {
-	var result []byte
+func (reader *MpcReader) findLine() (string, error) {
+	var result string
 	var err error
-	for len(result) != 203 {
-		result, err = reader.F.ReadBytes('\n')
-		if err != nil {
-			return nil, err
+
+	for len(result) != 202 {
+		if reader.S.Scan() {
+			result = reader.S.Text()
+		} else {
+			err = reader.S.Err()
+			if err != nil {
+				return "", err
+			} else {
+				return "", io.EOF
+			}
 		}
 	}
 	return result, nil
@@ -259,7 +283,7 @@ func (reader *MpcReader) findLine() ([]byte, error) {
 Convert a byte buffer into a minor planet. This takes apart the buffer and
 populates. The MinorPlanet struct
 */
-func convertToMinorPlanet(buffer []byte) *MinorPlanet {
+func convertToMinorPlanet(buffer string) *MinorPlanet {
 	var result = new(MinorPlanet)
 
 	result.Id = readPackedIdentifier(buffer[0:7])
