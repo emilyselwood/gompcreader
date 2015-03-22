@@ -1,6 +1,5 @@
 /*
-	Provides a simple method to read the Minor Planet Center data files.
-
+Package gompcreader provides a simple method to read the Minor Planet Center data files.
 */
 package gompcreader
 
@@ -32,7 +31,7 @@ import (
 MinorPlanet is the result of reading a record from a file
 */
 type MinorPlanet struct {
-	Id                           string
+	ID                           string
 	AbsoluteMagnitude            float64
 	Slope                        float64
 	Epoch                        time.Time
@@ -60,7 +59,7 @@ type MinorPlanet struct {
 }
 
 /*
-Use this to create a new minor planet center reader.
+NewMpcReader is used to create a new minor planet center reader.
 
 This takes a path as a string to the file and returns the reader structure.
 
@@ -68,7 +67,7 @@ If there is a problem opening the file it will return nil for the reader and an
 error indicating what went wrong.
 */
 func NewMpcReader(filePath string) (*MpcReader, error) {
-	var reader *MpcReader = new(MpcReader)
+	var reader = new(MpcReader)
 	var err error
 	reader.F, err = os.Open(filePath)
 	if err != nil {
@@ -80,7 +79,7 @@ func NewMpcReader(filePath string) (*MpcReader, error) {
 }
 
 /*
-Simple wrapper around a bufio.Reader used to read the file. Should be constructed
+MpcReader is a simple wrapper around a bufio.Reader used to read the file. Should be constructed
 using NewMpcReader(string)
 */
 type MpcReader struct {
@@ -104,6 +103,9 @@ func (reader *MpcReader) ReadEntry() (*MinorPlanet, error) {
 	return result, nil
 }
 
+/*
+Close the reader down. This will clean up the open file handle.
+*/
 func (reader *MpcReader) Close() {
 	reader.F.Close()
 }
@@ -164,7 +166,7 @@ Packed ints encode the most significant digit using 0-9A-Za-z to cover 0 to 62
 This is used as a base for the packed identifier and the packed date.
 */
 func readPackedInt(buffer string) int64 {
-	var result int64 = 0
+	var result int64
 	var decimal int64 = 1
 	var localBuffer = strings.TrimFunc(buffer, cutSec)
 	if len(localBuffer) > 0 {
@@ -271,9 +273,8 @@ func (reader *MpcReader) findLine() (string, error) {
 			err = reader.S.Err()
 			if err != nil {
 				return "", err
-			} else {
-				return "", io.EOF
 			}
+			return "", io.EOF
 		}
 	}
 	return result, nil
@@ -286,7 +287,7 @@ populates. The MinorPlanet struct
 func convertToMinorPlanet(buffer string) *MinorPlanet {
 	var result = new(MinorPlanet)
 
-	result.Id = readPackedIdentifier(buffer[0:7])
+	result.ID = readPackedIdentifier(buffer[0:7])
 	result.AbsoluteMagnitude = readFloat(buffer[8:13])
 	result.Slope = readFloat(buffer[14:19])
 	result.Epoch = readPackedTime(buffer[20:25])
@@ -326,10 +327,10 @@ func main() {
 		panic(err)
 	}
 
-	var count int64 = 0
+	var count int64
 	result, err := mpcReader.ReadEntry()
 	for err == nil {
-		fmt.Println(result.Id + ":" + result.ReadableDesignation)
+		fmt.Println(result.ID + ":" + result.ReadableDesignation)
 		result, err = mpcReader.ReadEntry()
 		count = count + 1
 	}
