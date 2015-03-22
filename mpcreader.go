@@ -19,6 +19,7 @@ package gompcreader
 import (
 	"bufio"
 	"bytes"
+	"compress/gzip"
 	"fmt"
 	"io"
 	"os"
@@ -73,7 +74,19 @@ func NewMpcReader(filePath string) (*MpcReader, error) {
 	if err != nil {
 		return nil, err
 	}
-	reader.S = bufio.NewScanner(reader.F)
+
+	if strings.HasSuffix(filePath, ".gz") {
+		reader.G, err = gzip.NewReader(reader.F)
+		if err != nil {
+			return nil, err
+		}
+
+		reader.S = bufio.NewScanner(reader.G)
+	} else {
+		reader.G = nil
+		reader.S = bufio.NewScanner(reader.F)
+	}
+
 	return reader, nil
 
 }
@@ -84,6 +97,7 @@ using NewMpcReader(string)
 */
 type MpcReader struct {
 	F *os.File
+	G *gzip.Reader
 	S *bufio.Scanner
 }
 
@@ -107,6 +121,9 @@ func (reader *MpcReader) ReadEntry() (*MinorPlanet, error) {
 Close the reader down. This will clean up the open file handle.
 */
 func (reader *MpcReader) Close() {
+	if reader.G != nil {
+		reader.G.Close()
+	}
 	reader.F.Close()
 }
 
