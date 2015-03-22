@@ -9,11 +9,6 @@ package gompcreader
   year of observations
   arc length
   perterbers translation
-	Split into package and main.
-  tests
-  documentation
-  Readme
-  publish
 */
 
 import (
@@ -66,25 +61,28 @@ This takes a path as a string to the file and returns the reader structure.
 
 If there is a problem opening the file it will return nil for the reader and an
 error indicating what went wrong.
+
+This will automatically detect if the file extension suggests a gziped version
+of the file and open it correctly.
 */
 func NewMpcReader(filePath string) (*MpcReader, error) {
 	var reader = new(MpcReader)
 	var err error
-	reader.F, err = os.Open(filePath)
+	reader.f, err = os.Open(filePath)
 	if err != nil {
 		return nil, err
 	}
 
 	if strings.HasSuffix(filePath, ".gz") {
-		reader.G, err = gzip.NewReader(reader.F)
+		reader.g, err = gzip.NewReader(reader.f)
 		if err != nil {
 			return nil, err
 		}
 
-		reader.S = bufio.NewScanner(reader.G)
+		reader.s = bufio.NewScanner(reader.g)
 	} else {
-		reader.G = nil
-		reader.S = bufio.NewScanner(reader.F)
+		reader.g = nil
+		reader.s = bufio.NewScanner(reader.f)
 	}
 
 	return reader, nil
@@ -96,9 +94,9 @@ MpcReader is a simple wrapper around a bufio.Reader used to read the file. Shoul
 using NewMpcReader(string)
 */
 type MpcReader struct {
-	F *os.File
-	G *gzip.Reader
-	S *bufio.Scanner
+	f *os.File
+	g *gzip.Reader
+	s *bufio.Scanner
 }
 
 /*
@@ -121,10 +119,10 @@ func (reader *MpcReader) ReadEntry() (*MinorPlanet, error) {
 Close the reader down. This will clean up the open file handle.
 */
 func (reader *MpcReader) Close() {
-	if reader.G != nil {
-		reader.G.Close()
+	if reader.g != nil {
+		reader.g.Close()
 	}
-	reader.F.Close()
+	reader.f.Close()
 }
 
 /*
@@ -284,10 +282,10 @@ func (reader *MpcReader) findLine() (string, error) {
 	var err error
 
 	for len(result) != 202 {
-		if reader.S.Scan() {
-			result = reader.S.Text()
+		if reader.s.Scan() {
+			result = reader.s.Text()
 		} else {
-			err = reader.S.Err()
+			err = reader.s.Err()
 			if err != nil {
 				return "", err
 			}
