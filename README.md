@@ -1,7 +1,7 @@
 # Minor Planet Center Reader #
 
 [![Build Status](https://travis-ci.org/wselwood/gompcreader.svg?branch=master)](https://travis-ci.org/wselwood/gompcreader)
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/wselwood/MinorPlanetCenterReader/blob/master/LICENSE.md)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/wselwood/gompcreader/blob/master/LICENSE.md)
 
 ## Overview ##
 
