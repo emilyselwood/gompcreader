@@ -5,35 +5,95 @@ import (
 	"time"
 )
 
+var readStringTests = []struct {
+	in  string
+	out string
+}{
+	{"fish and chips ", "fish and chips"},
+	{" fish and chips", "fish and chips"},
+	{"   000 000 000    ", "000 000 000"},
+	{"       ", ""},
+	{"", ""},
+}
+
 func TestReadString(t *testing.T) {
-	buffer := "fish and chips "
-	var result = readString(buffer)
-	if result != "fish and chips" {
-		t.Errorf("readString = %s, want \"fish and chips\"", result)
+	for _, tt := range readStringTests {
+		var result = readString(tt.in)
+		if result != tt.out {
+			t.Errorf("readString(%s) = %s expected %s",
+				tt.in,
+				result,
+				tt.out)
+		}
 	}
+}
+
+var readFloatTests = []struct {
+	in  string
+	out float64
+}{
+	{"12.8567 ", 12.8567},
+	{" -1.4553 ", -1.4553},
+	{"0.000000000", 0},
+	{"2.33E4", 23300},
+	{"", 0}, // Probably shouldn't parse or should have an error path
 }
 
 func TestReadFloat(t *testing.T) {
-	buffer := "12.8567 "
-	var result = readFloat(buffer)
-	if result != 12.8567 {
-		t.Errorf("readFloat = %f, want %f", result, 12.8567)
+	for _, tt := range readFloatTests {
+		var result = readFloat(tt.in)
+		if result != tt.out {
+			t.Errorf("readFloat(%s) = %f expected %f",
+				tt.in,
+				result,
+				tt.out)
+		}
 	}
+}
+
+var readIntTests = []struct {
+	in  string
+	out int64
+}{
+	{"128 ", 128},
+	{" 34533  ", 34533},
+	{" -345", -345},
 }
 
 func TestReadInt(t *testing.T) {
-	buffer := "128 "
-	var result = readInt(buffer)
-	if result != 128 {
-		t.Errorf("readInt = %d, want %d", result, 128)
+	for _, tt := range readIntTests {
+		var result = readInt(tt.in)
+		if result != tt.out {
+			t.Errorf("readInt(%s) = %d expected %d",
+				tt.in,
+				result,
+				tt.out)
+		}
 	}
 }
 
+var readPackedIntTests = []struct {
+	in  string
+	out int64
+}{
+	{" a128 ", 36128},
+	{" 1234  ", 1234},
+	{"z123", 61123},
+	{"00", 0},
+	{"A", 10},
+	{"Z", 35},
+	{"Z4", 354},
+}
+
 func TestReadPackedInt(t *testing.T) {
-	buffer := "a128 "
-	var result = readPackedInt(buffer)
-	if result != 36128 {
-		t.Errorf("readInt = %d, want %d", result, 36128)
+	for _, tt := range readPackedIntTests {
+		var result = readPackedInt(tt.in)
+		if result != tt.out {
+			t.Errorf("readPackedInt(%s) = %d expected %d",
+				tt.in,
+				result,
+				tt.out)
+		}
 	}
 }
 
@@ -52,8 +112,8 @@ func TestReadPackedDate(t *testing.T) {
 			t.Errorf(
 				"readPackedTime(%s) = %s expected %s",
 				tt.in,
-				result.Format("2006-01-02T03:04:00 -0700"),
-				tt.out.Format("2006-01-02T03:04:00 -0700"))
+				result.Format("2006-01-02T15:04:00 -0700"),
+				tt.out.Format("2006-01-02T15:04:00 -0700"))
 		}
 	}
 }
@@ -78,5 +138,26 @@ func TestReadPackedIdentifier(t *testing.T) {
 				result,
 				tt.out)
 		}
+	}
+}
+
+func TestConvert(t *testing.T) {
+	var entry = "00001    3.34  0.12 K13B4  10.55761   72.29213   80.32762   10.59398  0.0757973  0.21415869   2.7668073  0 MPO286777  6502 105 1802-2014 0.82 M-v 30h MPCLINUX   0000      (1) Ceres              20140307"
+	var result = convertToMinorPlanet(entry)
+	if result.ID != "1" {
+		t.Errorf("convertToMinorPlanet ID %s expected 1", result.ID)
+	}
+
+	if result.ReadableDesignation != "(1) Ceres" {
+		t.Errorf("convertToMinorPlanet ReadableDesignation %s expected 1",
+			result.ReadableDesignation)
+	}
+
+	var expected = time.Date(2014, time.March, 7, 0, 0, 0, 0, time.UTC)
+
+	if !expected.Equal(result.DateOfLastObservation) {
+		t.Errorf("convertToMinorPlanet DateOfLastObservation %s expected %s",
+			result.DateOfLastObservation.Format("2006-01-02T15:04:00 -0700"),
+			expected.Format("2006-01-02T15:04:00 -0700"))
 	}
 }

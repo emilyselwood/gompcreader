@@ -170,7 +170,7 @@ func readHexInt(buffer string) int64 {
 
 func readTime(buffer string) time.Time {
 	s := readString(buffer)
-	t, _ := time.Parse("20060102", s)
+	t, _ := time.ParseInLocation("20060102", s, time.UTC)
 	return t
 }
 
