@@ -1,5 +1,8 @@
 # Minor Planet Center Reader #
 
+[![Build Status](https://travis-ci.org/wselwood/gompcreader.svg?branch=master)](https://travis-ci.org/wselwood/gompcreader)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/wselwood/MinorPlanetCenterReader/blob/master/LICENSE.md)
+
 ## Overview ##
 
 Simple Go library to read the minor planet center data files.
