@@ -251,9 +251,10 @@ func readPackedIdentifier(buffer string) string {
 Packed time fields are simply three packed int representing year, month and day
 */
 func readPackedTime(buffer string) time.Time {
-	year := int(readPackedInt(buffer[0:3]))
-	month := int(readPackedInt(buffer[3:4]))
-	day := int(readPackedInt(buffer[4:5]))
+	var tb = readString(buffer)
+	year := int(readPackedInt(tb[0:3]))
+	month := int(readPackedInt(tb[3:4]))
+	day := int(readPackedInt(tb[4:5]))
 	return time.Date(year, time.Month(month), day, 0, 0, 0, 0, time.UTC)
 }
 
