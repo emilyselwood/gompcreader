@@ -111,8 +111,8 @@ func (reader *MpcReader) ReadEntry() (*MinorPlanet, error) {
 		return nil, err
 	}
 
-	result := convertToMinorPlanet(buffer)
-	return result, nil
+	result, err := convertToMinorPlanet(buffer)
+	return result, err
 }
 
 /*
@@ -141,43 +141,33 @@ Takes a chunk of the buffer and reads it as a float
 
 Note returns zero on error. This may not be ideal.
 */
-func readFloat(buffer string) float64 {
+func readFloat(buffer string) (float64, error) {
 	s := readString(buffer)
-	result, error := strconv.ParseFloat(s, 64)
-	if error == nil {
-		return result
-	}
-	return 0.0
+	return strconv.ParseFloat(s, 64)
 }
 
-func readInt(buffer string) int64 {
+func readInt(buffer string) (int64, error) {
 	s := readString(buffer)
-	result, error := strconv.ParseInt(s, 10, 64)
-	if error == nil {
-		return result
-	}
-	return 0
+	return strconv.ParseInt(s, 10, 64)
 }
 
-func readHexInt(buffer string) int64 {
+func readHexInt(buffer string) (int64, error) {
 	s := readString(buffer)
-	result, error := strconv.ParseInt(s, 16, 64)
-	if error == nil {
-		return result
-	}
-	return 0
+	return strconv.ParseInt(s, 16, 64)
 }
 
-func readTime(buffer string) time.Time {
+func readTime(buffer string) (time.Time, error) {
 	s := readString(buffer)
-	t, _ := time.ParseInLocation("20060102", s, time.UTC)
-	return t
+	if strings.HasSuffix(s, "0000") {
+		s = fmt.Sprint(s[:4], "0101")
+	}
+	return time.ParseInLocation("20060102", s, time.UTC)
 }
 
 /*
 Reads a packed int from the buffer
 
-Packed ints encode the most significant digit using 0-9A-Za-z to cover 0 to 62
+Packed ints encode the most significant digit using 0-9A-Za-z to cover 0 to 61
 This is used as a base for the packed identifier and the packed date.
 */
 func readPackedInt(buffer string) int64 {
@@ -229,7 +219,6 @@ func readPackedIdentifier(buffer string) string {
 		output.WriteRune(' ')
 		output.WriteByte(buffer[3])
 		output.WriteByte(buffer[6])
-		//result := fmt.Sprintf("%d %c%c", readPackedInt(buffer[0:3]), buffer[3], buffer[6]) //strconv.FormatInt(, 10) + " " + string(buffer[3]) + string(buffer[6])
 		number := readPackedInt(buffer[4:6])
 		if number > 0 {
 			output.WriteString(strconv.FormatInt(number, 10))
@@ -243,7 +232,6 @@ func readPackedIdentifier(buffer string) string {
 		output.WriteRune('-')
 		output.WriteByte(buffer[1])
 		return output.String()
-		//fmt.Sprintf("%d %c-%c", number, buffer[0], buffer[1]) //strconv.FormatInt(number, 10) + " " + rune(buffer[0]) + "-" + rune(buffer[1])
 	}
 }
 
@@ -300,39 +288,73 @@ func (reader *MpcReader) findLine() (string, error) {
 Convert a byte buffer into a minor planet. This takes apart the buffer and
 populates. The MinorPlanet struct
 */
-func convertToMinorPlanet(buffer string) *MinorPlanet {
+func convertToMinorPlanet(buffer string) (*MinorPlanet, error) {
 	var result = new(MinorPlanet)
+	var err error
 
 	result.ID = readPackedIdentifier(buffer[0:7])
-	result.AbsoluteMagnitude = readFloat(buffer[8:13])
-	result.Slope = readFloat(buffer[14:19])
+
+	// the following two columns are alowed to be blank
+	result.AbsoluteMagnitude, _ = readFloat(buffer[8:13])
+	result.Slope, _ = readFloat(buffer[14:19])
+
 	result.Epoch = readPackedTime(buffer[20:25])
-	result.MeanAnomalyEpoch = readFloat(buffer[26:35])
-	result.ArgumentOfPerihelion = readFloat(buffer[37:47])
-	result.LongitudeOfTheAscendingNode = readFloat(buffer[8:57])
-	result.InclinationToTheEcliptic = readFloat(buffer[59:68])
-	result.OrbitalEccentricity = readFloat(buffer[70:79])
-	result.MeanDailyMotion = readFloat(buffer[80:91])
-	result.SemimajorAxis = readFloat(buffer[92:103])
+	result.MeanAnomalyEpoch, err = readFloat(buffer[26:35])
+	if err != nil {
+		return nil, err
+	}
+	result.ArgumentOfPerihelion, err = readFloat(buffer[37:47])
+	if err != nil {
+		return nil, err
+	}
+	result.LongitudeOfTheAscendingNode, err = readFloat(buffer[48:57])
+	if err != nil {
+		return nil, err
+	}
+	result.InclinationToTheEcliptic, err = readFloat(buffer[59:68])
+	if err != nil {
+		return nil, err
+	}
+	result.OrbitalEccentricity, err = readFloat(buffer[70:79])
+	if err != nil {
+		return nil, err
+	}
+	result.MeanDailyMotion, err = readFloat(buffer[80:91])
+	if err != nil {
+		return nil, err
+	}
+	result.SemimajorAxis, err = readFloat(buffer[92:103])
+	if err != nil {
+		return nil, err
+	}
 	result.UncertaintyParameter = readString(buffer[105:106])
 	result.Reference = readString(buffer[107:116])
-	result.NumberOfObservations = readInt(buffer[117:122])
-	result.NumberOfOppositions = readInt(buffer[123:126])
+	result.NumberOfObservations, _ = readInt(buffer[117:122])
+
+	result.NumberOfOppositions, _ = readInt(buffer[123:126])
+
 	// ignore opposition for a second.
-	result.RMSResidual = readFloat(buffer[137:141])
+	result.RMSResidual, _ = readFloat(buffer[137:141])
+
 	result.CoarseIndicatorOfPerturbers = readString(buffer[142:145])
 	result.PreciseIndicatorOfPerturbers = readString(buffer[146:149])
 	result.ComputerName = readString(buffer[150:160])
-	result.HexDigitFlags = readHexInt(buffer[161:165])
+	result.HexDigitFlags, err = readHexInt(buffer[161:165])
+	if err != nil {
+		return nil, err
+	}
 	result.ReadableDesignation = readString(buffer[166:194])
-	result.DateOfLastObservation = readTime(buffer[194:202])
+	result.DateOfLastObservation, err = readTime(buffer[194:202])
+	if err != nil {
+		return nil, err
+	}
 
 	// optional parts depending on number of observations.
 	//result.yearOfFirstObservation = readInt(buffer, xxx, yyy)
 	//result.yearOfLastObservation = readInt(buffer, xxx, yyy)
 	//result.arcLength = readInt(buffer, xxx, yyy)
 
-	return result
+	return result, nil
 }
 
 func main() {
