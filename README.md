@@ -2,7 +2,7 @@
 
 [![Build Status](https://travis-ci.org/wselwood/gompcreader.svg?branch=master)](https://travis-ci.org/wselwood/gompcreader)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/wselwood/gompcreader/blob/master/LICENSE.md)
-[![Docs](https://img.shields.io/badge/license-MIT-blue.svg)]https://godoc.org/github.com/wselwood/gompcreader)
+[![Docs](https://img.shields.io/badge/docs-godoc.org-blue.svg)](https://godoc.org/github.com/wselwood/gompcreader)
 
 ## Overview ##
 
