@@ -299,11 +299,9 @@ var convertErrorsTests = []struct {
 	out string
 }{
 	{"ajghfjhsdfjkhgjfkghjfhgjfhgjsfhgjhfjghfdjkh",
-		"strconv.ParseFloat: parsing \"dfjkh\": invalid syntax"},
+		"strconv.ParseFloat: parsing \"gjsfhgjhf\": invalid syntax"},
 	{"00001    3.34  0.12 K13B4  10.55761  sjhagjkfhgjkshfgjl",
 		"strconv.ParseFloat: parsing \"sjhagjkfhg\": invalid syntax"},
-	{"00001    3.34  dsfj K13B4  10.55761  sjhagjkfhgjkshfgjl",
-		"strconv.ParseFloat: parsing \"dsfj\": invalid syntax"},
 	{"00001    3.34  0.12 K13B4  dshgsh  sjhagjkfhgjkshfgjl",
 		"strconv.ParseFloat: parsing \"dshgsh\": invalid syntax"},
 	{"00001    3.34  0.12 K13B4  10.55761   72.29213  jajhkhs  hfdsjkgjkh",
