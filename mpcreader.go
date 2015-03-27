@@ -155,6 +155,10 @@ func readHexInt(buffer string) (int64, error) {
 	return strconv.ParseInt(s, 16, 64)
 }
 
+// Some times we get dates with out months and days.
+// For the sake of not losing data we make them the first of janurary.
+// Strangely most of these appear to be around 1995 1996
+// Other dates are handled normally.
 func readTime(buffer string) (time.Time, error) {
 	s := readString(buffer)
 	if strings.HasSuffix(s, "0000") {

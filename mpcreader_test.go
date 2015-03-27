@@ -292,7 +292,7 @@ func TestReadDate(t *testing.T) {
 	}
 }
 
-func TestConvert(t *testing.T) {
+func TestConvertCeres(t *testing.T) {
 	var entry = "00001    3.34  0.12 K13B4  10.55761   72.29213   80.32762   10.59398  0.0757973  0.21415869   2.7668073  0 MPO286777  6502 105 1802-2014 0.82 M-v 30h MPCLINUX   0000      (1) Ceres              20140307"
 	var result, err = convertToMinorPlanet(entry)
 	if err != nil {
@@ -327,6 +327,46 @@ func TestConvert(t *testing.T) {
 
 	if result.YearOfLastObservation != 2014 {
 		t.Errorf("convertToMinorPlanet YearOfLastObservation %s expected 2014",
+			result.YearOfLastObservation)
+	}
+
+}
+
+func TestConvertT3S5154(t *testing.T) {
+	var entry = "T3S5154 17.1   0.15 J77AO  17.78418  247.82110  104.38071    9.61380  0.2757131  0.18128053   3.0919701    MPC 12559     8   1    6 days              Bardwell   2000          5154 T-3           19771017"
+	var result, err = convertToMinorPlanet(entry)
+	if err != nil {
+		t.Fatalf("convertToMinorPlanet returned an error %s", err)
+	}
+	if result.ID != "5154 T-3" {
+		t.Errorf("convertToMinorPlanet ID %s expected 5154 T-3", result.ID)
+	}
+
+	if result.ReadableDesignation != "5154 T-3" {
+		t.Errorf("convertToMinorPlanet ReadableDesignation %s expected 5154 T-3",
+			result.ReadableDesignation)
+	}
+
+	var expected = time.Date(1977, time.October, 17, 0, 0, 0, 0, time.UTC)
+
+	if !expected.Equal(result.DateOfLastObservation) {
+		t.Errorf("convertToMinorPlanet DateOfLastObservation %s expected %s",
+			result.DateOfLastObservation.Format("2006-01-02T15:04:00 -0700"),
+			expected.Format("2006-01-02T15:04:00 -0700"))
+	}
+
+	if result.ArcLength != 6 {
+		t.Errorf("convertToMinorPlanet ArcLength %s expected 6",
+			result.ArcLength)
+	}
+
+	if result.YearOfFirstObservation != 0 {
+		t.Errorf("convertToMinorPlanet YearOfFirstObservation %s expected 0",
+			result.YearOfFirstObservation)
+	}
+
+	if result.YearOfLastObservation != 0 {
+		t.Errorf("convertToMinorPlanet YearOfLastObservation %s expected 0",
 			result.YearOfLastObservation)
 	}
 
