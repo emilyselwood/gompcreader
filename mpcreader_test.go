@@ -299,6 +299,22 @@ func TestConvert(t *testing.T) {
 			result.DateOfLastObservation.Format("2006-01-02T15:04:00 -0700"),
 			expected.Format("2006-01-02T15:04:00 -0700"))
 	}
+
+	if result.ArcLength != 0 {
+		t.Errorf("convertToMinorPlanet ArcLength %s expected 0",
+			result.ArcLength)
+	}
+
+	if result.YearOfFirstObservation != 1802 {
+		t.Errorf("convertToMinorPlanet YearOfFirstObservation %s expected 1802",
+			result.YearOfFirstObservation)
+	}
+
+	if result.YearOfLastObservation != 2014 {
+		t.Errorf("convertToMinorPlanet YearOfLastObservation %s expected 2014",
+			result.YearOfLastObservation)
+	}
+
 }
 
 var convertErrorsTests = []stringTestCase{

@@ -138,8 +138,6 @@ func cutSec(input rune) bool {
 
 /*
 Takes a chunk of the buffer and reads it as a float
-
-Note returns zero on error. This may not be ideal.
 */
 func readFloat(buffer string) (float64, error) {
 	s := readString(buffer)
@@ -289,72 +287,83 @@ Convert a byte buffer into a minor planet. This takes apart the buffer and
 populates. The MinorPlanet struct
 */
 func convertToMinorPlanet(buffer string) (*MinorPlanet, error) {
-	var result = new(MinorPlanet)
+	var r = new(MinorPlanet)
 	var err error
 
-	result.ID = readPackedIdentifier(buffer[0:7])
+	r.ID = readPackedIdentifier(buffer[0:7])
 
 	// the following two columns are alowed to be blank
-	result.AbsoluteMagnitude, _ = readFloat(buffer[8:13])
-	result.Slope, _ = readFloat(buffer[14:19])
+	r.AbsoluteMagnitude, _ = readFloat(buffer[8:13])
+	r.Slope, _ = readFloat(buffer[14:19])
 
-	result.Epoch = readPackedTime(buffer[20:25])
-	result.MeanAnomalyEpoch, err = readFloat(buffer[26:35])
+	r.Epoch = readPackedTime(buffer[20:25])
+	r.MeanAnomalyEpoch, err = readFloat(buffer[26:35])
 	if err != nil {
 		return nil, err
 	}
-	result.ArgumentOfPerihelion, err = readFloat(buffer[37:47])
+	r.ArgumentOfPerihelion, err = readFloat(buffer[37:47])
 	if err != nil {
 		return nil, err
 	}
-	result.LongitudeOfTheAscendingNode, err = readFloat(buffer[48:57])
+	r.LongitudeOfTheAscendingNode, err = readFloat(buffer[48:57])
 	if err != nil {
 		return nil, err
 	}
-	result.InclinationToTheEcliptic, err = readFloat(buffer[59:68])
+	r.InclinationToTheEcliptic, err = readFloat(buffer[59:68])
 	if err != nil {
 		return nil, err
 	}
-	result.OrbitalEccentricity, err = readFloat(buffer[70:79])
+	r.OrbitalEccentricity, err = readFloat(buffer[70:79])
 	if err != nil {
 		return nil, err
 	}
-	result.MeanDailyMotion, err = readFloat(buffer[80:91])
+	r.MeanDailyMotion, err = readFloat(buffer[80:91])
 	if err != nil {
 		return nil, err
 	}
-	result.SemimajorAxis, err = readFloat(buffer[92:103])
+	r.SemimajorAxis, err = readFloat(buffer[92:103])
 	if err != nil {
 		return nil, err
 	}
-	result.UncertaintyParameter = readString(buffer[105:106])
-	result.Reference = readString(buffer[107:116])
-	result.NumberOfObservations, _ = readInt(buffer[117:122])
+	r.UncertaintyParameter = readString(buffer[105:106])
+	r.Reference = readString(buffer[107:116])
+	r.NumberOfObservations, _ = readInt(buffer[117:122])
 
-	result.NumberOfOppositions, _ = readInt(buffer[123:126])
+	r.NumberOfOppositions, _ = readInt(buffer[123:126])
+
+	if r.NumberOfOppositions > 1 {
+		r.YearOfFirstObservation, err = readInt(buffer[127:131])
+		if err != nil {
+			return nil, err
+		}
+		r.YearOfLastObservation, err = readInt(buffer[132:136])
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		r.ArcLength, err = readInt(buffer[127:136])
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	// ignore opposition for a second.
-	result.RMSResidual, _ = readFloat(buffer[137:141])
+	r.RMSResidual, _ = readFloat(buffer[137:141])
 
-	result.CoarseIndicatorOfPerturbers = readString(buffer[142:145])
-	result.PreciseIndicatorOfPerturbers = readString(buffer[146:149])
-	result.ComputerName = readString(buffer[150:160])
-	result.HexDigitFlags, err = readHexInt(buffer[161:165])
+	r.CoarseIndicatorOfPerturbers = readString(buffer[142:145])
+	r.PreciseIndicatorOfPerturbers = readString(buffer[146:149])
+	r.ComputerName = readString(buffer[150:160])
+	r.HexDigitFlags, err = readHexInt(buffer[161:165])
 	if err != nil {
 		return nil, err
 	}
-	result.ReadableDesignation = readString(buffer[166:194])
-	result.DateOfLastObservation, err = readTime(buffer[194:202])
+	r.ReadableDesignation = readString(buffer[166:194])
+	r.DateOfLastObservation, err = readTime(buffer[194:202])
 	if err != nil {
 		return nil, err
 	}
 
-	// optional parts depending on number of observations.
-	//result.yearOfFirstObservation = readInt(buffer, xxx, yyy)
-	//result.yearOfLastObservation = readInt(buffer, xxx, yyy)
-	//result.arcLength = readInt(buffer, xxx, yyy)
-
-	return result, nil
+	return r, nil
 }
 
 func main() {
