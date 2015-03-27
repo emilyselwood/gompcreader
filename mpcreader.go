@@ -15,6 +15,7 @@ import (
 	"bufio"
 	"bytes"
 	"compress/gzip"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -245,6 +246,22 @@ func readPackedTime(buffer string) time.Time {
 }
 
 /*
+The Arc length column contains strings like "  4 days"
+
+First we use readString to trim the string.
+Then we split the string on spaces. If we didn't trim the split would include empty strings
+Then convert the result to an int
+*/
+func readArcLength(buffer string) (int64, error) {
+	var s = readString(buffer)
+	var np = strings.SplitN(s, " ", 2)
+	if np == nil {
+		return 0, errors.New("Arc length didn't have enough parts")
+	}
+	return readInt(np[0])
+}
+
+/*
 Helper function to check if a section of the buffer only contains numbers and
 spaces. Used for decoding packed ints.
 */
@@ -297,94 +314,85 @@ func convertToMinorPlanet(buffer string) (*MinorPlanet, error) {
 	r.Slope, _ = readFloat(buffer[14:19])
 
 	r.Epoch = readPackedTime(buffer[20:25])
+
 	r.MeanAnomalyEpoch, err = readFloat(buffer[26:35])
 	if err != nil {
 		return nil, err
 	}
+
 	r.ArgumentOfPerihelion, err = readFloat(buffer[37:47])
 	if err != nil {
 		return nil, err
 	}
+
 	r.LongitudeOfTheAscendingNode, err = readFloat(buffer[48:57])
 	if err != nil {
 		return nil, err
 	}
+
 	r.InclinationToTheEcliptic, err = readFloat(buffer[59:68])
 	if err != nil {
 		return nil, err
 	}
+
 	r.OrbitalEccentricity, err = readFloat(buffer[70:79])
 	if err != nil {
 		return nil, err
 	}
+
 	r.MeanDailyMotion, err = readFloat(buffer[80:91])
 	if err != nil {
 		return nil, err
 	}
+
 	r.SemimajorAxis, err = readFloat(buffer[92:103])
 	if err != nil {
 		return nil, err
 	}
+
 	r.UncertaintyParameter = readString(buffer[105:106])
 	r.Reference = readString(buffer[107:116])
 	r.NumberOfObservations, _ = readInt(buffer[117:122])
-
 	r.NumberOfOppositions, _ = readInt(buffer[123:126])
 
+	// The next column has different values depending on the NumberOfOppositions
+	// When there has been more than one there are two years showing the first and last observations
+	// When there is less than or equal one then there is the amount of orbit we have seen.
 	if r.NumberOfOppositions > 1 {
 		r.YearOfFirstObservation, err = readInt(buffer[127:131])
 		if err != nil {
 			return nil, err
 		}
+
 		r.YearOfLastObservation, err = readInt(buffer[132:136])
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		r.ArcLength, err = readInt(buffer[127:136])
+		r.ArcLength, err = readArcLength(buffer[127:136])
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	// ignore opposition for a second.
+	// This column is optional. Some times it is blank
 	r.RMSResidual, _ = readFloat(buffer[137:141])
 
 	r.CoarseIndicatorOfPerturbers = readString(buffer[142:145])
 	r.PreciseIndicatorOfPerturbers = readString(buffer[146:149])
 	r.ComputerName = readString(buffer[150:160])
+
 	r.HexDigitFlags, err = readHexInt(buffer[161:165])
 	if err != nil {
 		return nil, err
 	}
+
 	r.ReadableDesignation = readString(buffer[166:194])
+
 	r.DateOfLastObservation, err = readTime(buffer[194:202])
 	if err != nil {
 		return nil, err
 	}
 
 	return r, nil
-}
-
-func main() {
-
-	mpcReader, err := NewMpcReader("/home/wselwood/MinorPlanets/MPCORB.DAT")
-	if err != nil {
-		fmt.Println("error creating mpcReader " + err.Error())
-		panic(err)
-	}
-
-	var count int64
-	result, err := mpcReader.ReadEntry()
-	for err == nil {
-		fmt.Println(result.ID + ":" + result.ReadableDesignation)
-		result, err = mpcReader.ReadEntry()
-		count = count + 1
-	}
-
-	if err != nil && err != io.EOF {
-		fmt.Println("error reading line " + err.Error())
-	}
-
-	fmt.Println("read " + strconv.FormatInt(count, 10) + " records")
 }

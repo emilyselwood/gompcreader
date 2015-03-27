@@ -229,6 +229,21 @@ func TestReadPackedIdentifier(t *testing.T) {
 		})
 }
 
+var arcLengthTests = []intTestCase{
+	{"  4 days", 4},
+	{"34 days ", 34},
+}
+
+func TestArcLength(t *testing.T) {
+	intTest(t,
+		"readArcLength",
+		arcLengthTests,
+		func(c intTestCase) (bool, int64, error) {
+			var r, e = readArcLength(c.in)
+			return e == nil && r == c.out, r, e
+		})
+}
+
 var packedDateTests = []struct {
 	in  string
 	out time.Time
