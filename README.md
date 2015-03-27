@@ -40,6 +40,7 @@ func main() {
 	if err != nil {
 		log.Fatal("error creating mpcReader ", err)
 	}
+	defer mpcReader.Close()
 
 	var count int64
 	result, err := mpcReader.ReadEntry()
