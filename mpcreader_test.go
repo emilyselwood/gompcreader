@@ -1,14 +1,68 @@
 package gompcreader
 
 import (
+	"fmt"
 	"testing"
 	"time"
 )
 
-var readStringTests = []struct {
+type stringTestCase struct {
 	in  string
 	out string
-}{
+}
+
+type doStringTest func(stringTestCase) (bool, string)
+
+func stringTest(t *testing.T, n string, cases []stringTestCase, test doStringTest) {
+	for _, tt := range cases {
+		var r, a = test(tt)
+		if !r {
+			t.Errorf("%s(%s) was %s expected %s", n, tt.in, a, tt.out)
+		}
+	}
+}
+
+type intTestCase struct {
+	in  string
+	out int64
+}
+
+type doIntTest func(intTestCase) (bool, int64, error)
+
+func intTest(t *testing.T, n string, cases []intTestCase, test doIntTest) {
+	for _, tt := range cases {
+		var r, a, e = test(tt)
+		if !r {
+			if e != nil {
+				t.Errorf("%s(%s) failed with %s. Expected %d", n, tt.in, e, tt.out)
+			} else {
+				t.Errorf("%s(%s) was %d expected %d", n, tt.in, a, tt.out)
+			}
+		}
+	}
+}
+
+type floatTestCase struct {
+	in  string
+	out float64
+}
+
+type doFloatTest func(floatTestCase) (bool, float64, error)
+
+func floatTest(t *testing.T, n string, cases []floatTestCase, test doFloatTest) {
+	for _, tt := range cases {
+		var r, a, e = test(tt)
+		if !r {
+			if e != nil {
+				t.Errorf("%s(%s) failed with %s. Expected %f", n, tt.in, e, tt.out)
+			} else {
+				t.Errorf("%s(%s) was %f expected %f", n, tt.in, a, tt.out)
+			}
+		}
+	}
+}
+
+var readStringTests = []stringTestCase{
 	{"fish and chips ", "fish and chips"},
 	{" fish and chips", "fish and chips"},
 	{"   000 000 000    ", "000 000 000"},
@@ -17,21 +71,16 @@ var readStringTests = []struct {
 }
 
 func TestReadString(t *testing.T) {
-	for _, tt := range readStringTests {
-		var result = readString(tt.in)
-		if result != tt.out {
-			t.Errorf("readString(%s) = %s expected %s",
-				tt.in,
-				result,
-				tt.out)
-		}
-	}
+	stringTest(t,
+		"readString",
+		readStringTests,
+		func(t stringTestCase) (bool, string) {
+			var r = readString(t.in)
+			return r == t.out, r
+		})
 }
 
-var readFloatTests = []struct {
-	in  string
-	out float64
-}{
+var readFloatTests = []floatTestCase{
 	{"12.8567 ", 12.8567},
 	{" -1.4553 ", -1.4553},
 	{"0.000000000", 0},
@@ -39,102 +88,71 @@ var readFloatTests = []struct {
 }
 
 func TestReadFloat(t *testing.T) {
-	for _, tt := range readFloatTests {
-		var result, err = readFloat(tt.in)
-		if err != nil {
-			t.Errorf("readFloat(%s) errored with %s expected %f",
-				tt.in,
-				err.Error(),
-				tt.out)
-		} else if result != tt.out {
-			t.Errorf("readFloat(%s) = %f expected %f",
-				tt.in,
-				result,
-				tt.out)
-		}
-	}
+	floatTest(t,
+		"readFloat",
+		readFloatTests,
+		func(c floatTestCase) (bool, float64, error) {
+			var r, e = readFloat(c.in)
+			return e == nil && r == c.out, r, e
+		})
 }
 
-var errorFloatTests = []struct {
-	in  string
-	out string
-}{
+var errorFloatTests = []stringTestCase{
 	{"", "strconv.ParseFloat: parsing \"\": invalid syntax"},
 	{"jshdjkghgjk", "strconv.ParseFloat: parsing \"jshdjkghgjk\": invalid syntax"},
+	{"54767 64", "strconv.ParseFloat: parsing \"54767 64\": invalid syntax"},
 }
 
 func TestErrorReadFloat(t *testing.T) {
-	for _, tt := range errorFloatTests {
-		var result, err = readFloat(tt.in)
-		if err != nil && err.Error() != tt.out {
-			t.Errorf("readFloat(%s) errored with %s expected %s",
-				tt.in,
-				err.Error(),
-				tt.out)
-		} else if err == nil {
-			t.Errorf("readFloat(%s) = %f expected %s",
-				tt.in,
-				result,
-				tt.out)
-		}
-	}
+	stringTest(t,
+		"readFloat",
+		errorFloatTests,
+		func(c stringTestCase) (bool, string) {
+			var r, e = readFloat(c.in)
+			if e == nil {
+				return false, fmt.Sprintf("%f", r)
+			}
+			return e.Error() == c.out, e.Error()
+		})
 }
 
-var readIntTests = []struct {
-	in  string
-	out int64
-}{
+var readIntTests = []intTestCase{
 	{"128 ", 128},
 	{" 34533  ", 34533},
 	{" -345", -345},
 }
 
 func TestReadInt(t *testing.T) {
-	for _, tt := range readIntTests {
-		var result, err = readInt(tt.in)
-		if err != nil {
-			t.Errorf("readInt(%s) errored with %s expected %d",
-				tt.in,
-				err,
-				tt.out)
-		} else if result != tt.out {
-			t.Errorf("readInt(%s) = %d expected %d",
-				tt.in,
-				result,
-				tt.out)
-		}
-	}
+	intTest(t,
+		"readInt",
+		readIntTests,
+		func(t intTestCase) (bool, int64, error) {
+			var r, e = readInt(t.in)
+			return e == nil && r == t.out, r, e
+		})
 }
 
-var errorIntTests = []struct {
-	in  string
-	out string
-}{
+var errorIntTests = []stringTestCase{
 	{"", "strconv.ParseInt: parsing \"\": invalid syntax"},
 	{"jshdjkghgjk", "strconv.ParseInt: parsing \"jshdjkghgjk\": invalid syntax"},
+	{"54767 64", "strconv.ParseInt: parsing \"54767 64\": invalid syntax"},
+	{"54767.64", "strconv.ParseInt: parsing \"54767.64\": invalid syntax"},
 }
 
 func TestReadIntErrors(t *testing.T) {
-	for _, tt := range errorIntTests {
-		var result, err = readInt(tt.in)
-		if err != nil && err.Error() != tt.out {
-			t.Errorf("readInt(%s) errored with %s expected %s",
-				tt.in,
-				err,
-				tt.out)
-		} else if err == nil {
-			t.Errorf("readInt(%s) = %d expected error %s",
-				tt.in,
-				result,
-				tt.out)
-		}
-	}
+	stringTest(t,
+		"readInt",
+		errorIntTests,
+		func(c stringTestCase) (bool, string) {
+			var r, e = readInt(c.in)
+			if e == nil {
+				return false, fmt.Sprintf("%d", r)
+			}
+			return e.Error() == c.out, e.Error()
+		})
 }
 
-var readHexIntTests = []struct {
-	in  string
-	out int64
-}{
+var readHexIntTests = []intTestCase{
 	{"128 ", 296},
 	{" 34533  ", 214323},
 	{" -345", -837},
@@ -143,51 +161,36 @@ var readHexIntTests = []struct {
 }
 
 func TestReadHexInt(t *testing.T) {
-	for _, tt := range readHexIntTests {
-		var result, err = readHexInt(tt.in)
-		if err != nil {
-			t.Errorf("readInt(%s) errored with %s expected %d",
-				tt.in,
-				err,
-				tt.out)
-		} else if result != tt.out {
-			t.Errorf("readInt(%s) = %d expected %d",
-				tt.in,
-				result,
-				tt.out)
-		}
-	}
+	intTest(t,
+		"readHexInt",
+		readHexIntTests,
+		func(t intTestCase) (bool, int64, error) {
+			var r, e = readHexInt(t.in)
+			return e == nil && r == t.out, r, e
+		})
 }
 
-var errorHexIntTests = []struct {
-	in  string
-	out string
-}{
+var errorHexIntTests = []stringTestCase{
 	{"", "strconv.ParseInt: parsing \"\": invalid syntax"},
 	{"jshdjkghgjk", "strconv.ParseInt: parsing \"jshdjkghgjk\": invalid syntax"},
+	{"54767 64", "strconv.ParseInt: parsing \"54767 64\": invalid syntax"},
+	{"54767.64", "strconv.ParseInt: parsing \"54767.64\": invalid syntax"},
 }
 
 func TestReadHexIntErrors(t *testing.T) {
-	for _, tt := range errorHexIntTests {
-		var result, err = readHexInt(tt.in)
-		if err != nil && err.Error() != tt.out {
-			t.Errorf("readInt(%s) errored with %s expected %s",
-				tt.in,
-				err,
-				tt.out)
-		} else if err == nil {
-			t.Errorf("readInt(%s) = %d expected error %s",
-				tt.in,
-				result,
-				tt.out)
-		}
-	}
+	stringTest(t,
+		"readHexInt",
+		errorHexIntTests,
+		func(c stringTestCase) (bool, string) {
+			var r, e = readHexInt(c.in)
+			if e == nil {
+				return false, fmt.Sprintf("%d", r)
+			}
+			return e.Error() == c.out, e.Error()
+		})
 }
 
-var readPackedIntTests = []struct {
-	in  string
-	out int64
-}{
+var readPackedIntTests = []intTestCase{
 	{" a128 ", 36128},
 	{" 1234  ", 1234},
 	{"z123", 61123},
@@ -198,15 +201,32 @@ var readPackedIntTests = []struct {
 }
 
 func TestReadPackedInt(t *testing.T) {
-	for _, tt := range readPackedIntTests {
-		var result = readPackedInt(tt.in)
-		if result != tt.out {
-			t.Errorf("readPackedInt(%s) = %d expected %d",
-				tt.in,
-				result,
-				tt.out)
-		}
-	}
+	intTest(t,
+		"readPackedInt",
+		readPackedIntTests,
+		func(t intTestCase) (bool, int64, error) {
+			var r = readPackedInt(t.in)
+			return r == t.out, r, nil
+		})
+}
+
+var packedIdentifierTests = []stringTestCase{
+	{"PLS2040", "2040 P-L"},
+	{"T1S3138", "3138 T-1"},
+	{"J95X00A", "1995 XA"},
+	{"J95X45A", "1995 XA45"},
+	{"A0001", "100001"},
+	{"0000054 ", "54"},
+}
+
+func TestReadPackedIdentifier(t *testing.T) {
+	stringTest(t,
+		"readPackedIdentifier",
+		packedIdentifierTests,
+		func(c stringTestCase) (bool, string) {
+			var r = readPackedIdentifier(c.in)
+			return r == c.out, r
+		})
 }
 
 var packedDateTests = []struct {
@@ -230,43 +250,30 @@ func TestReadPackedDate(t *testing.T) {
 	}
 }
 
-var packedIdentifierTests = []struct {
+var dateTests = []struct {
 	in  string
-	out string
+	out time.Time
 }{
-	{"PLS2040", "2040 P-L"},
-	{"T1S3138", "3138 T-1"},
-	{"J95X00A", "1995 XA"},
-	{"J95X45A", "1995 XA45"},
-	{"A0001", "100001"},
-	{"0000054 ", "54"},
-}
-
-func TestReadPackedIdentifier(t *testing.T) {
-	for _, tt := range packedIdentifierTests {
-		var result = readPackedIdentifier(tt.in)
-		if result != tt.out {
-			t.Errorf("readPackedIdentifier(%s) == %s expected %s",
-				tt.in,
-				result,
-				tt.out)
-		}
-	}
+	{"19950000", time.Date(1995, 1, 1, 0, 0, 0, 0, time.UTC)},
+	{" 19951123 ", time.Date(1995, 11, 23, 0, 0, 0, 0, time.UTC)},
 }
 
 func TestReadDate(t *testing.T) {
-	var in = "19950000"
-	var out = time.Date(1995, 1, 1, 0, 0, 0, 0, time.UTC)
-	var result, err = readTime(in)
-	if err != nil {
-		t.Errorf("readTime(%s) returned %s expected", in, err)
-	} else if result != out {
-		t.Errorf("readTime(%s) = %s expected %s",
-			in,
-			result.Format("2006-01-02T15:04:00 -0700"),
-			out.Format("2006-01-02T15:04:00 -0700"),
-		)
-
+	for _, tt := range dateTests {
+		var r, e = readTime(tt.in)
+		if e != nil {
+			t.Errorf("readTime(%s) errored %s, expected %s",
+				tt.in,
+				e.Error(),
+				tt.out.Format("2006-01-02T15:04:00 -0700"))
+		}
+		if !tt.out.Equal(r) {
+			t.Errorf(
+				"readTime(%s) = %s expected %s",
+				tt.in,
+				r.Format("2006-01-02T15:04:00 -0700"),
+				tt.out.Format("2006-01-02T15:04:00 -0700"))
+		}
 	}
 }
 
@@ -294,10 +301,7 @@ func TestConvert(t *testing.T) {
 	}
 }
 
-var convertErrorsTests = []struct {
-	in  string
-	out string
-}{
+var convertErrorsTests = []stringTestCase{
 	{"ajghfjhsdfjkhgjfkghjfhgjfhgjsfhgjhfjghfdjkh",
 		"strconv.ParseFloat: parsing \"gjsfhgjhf\": invalid syntax"},
 	{"00001    3.34  0.12 K13B4  10.55761  sjhagjkfhgjkshfgjl",
@@ -309,17 +313,11 @@ var convertErrorsTests = []struct {
 }
 
 func TestConverErrors(t *testing.T) {
-	for _, tt := range convertErrorsTests {
-		_, err := convertToMinorPlanet(tt.in)
-		if err != nil && err.Error() != tt.out {
-			t.Errorf("convertToMinorPlanet(%s) errored %s expected %s",
-				tt.in,
-				err,
-				tt.out)
-		} else if err == nil {
-			t.Errorf("convertToMinorPlanet(%s) didn't error, expected %s",
-				tt.in,
-				tt.out)
-		}
-	}
+	stringTest(t,
+		"convertToMinorPlanet",
+		convertErrorsTests,
+		func(c stringTestCase) (bool, string) {
+			var _, e = convertToMinorPlanet(c.in)
+			return e.Error() == c.out, e.Error()
+		})
 }
