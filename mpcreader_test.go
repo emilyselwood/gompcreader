@@ -244,6 +244,22 @@ func TestArcLength(t *testing.T) {
 		})
 }
 
+var arcLengthErrorTests = []stringTestCase{
+	{" dsfhsdj dsfjhdhsj", "strconv.ParseInt: parsing \"dsfhsdj\": invalid syntax"},
+	{"sghkjsdf", "Arc length didn't have enough parts"},
+	{"", "Arc length didn't have enough parts"},
+}
+
+func TestArcLengthErrors(t *testing.T) {
+	stringTest(t,
+		"readArcLength",
+		arcLengthErrorTests,
+		func(c stringTestCase) (bool, string) {
+			_, e := readArcLength(c.in)
+			return e.Error() == c.out, e.Error()
+		})
+}
+
 var packedDateTests = []struct {
 	in  string
 	out time.Time

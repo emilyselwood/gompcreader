@@ -1,13 +1,32 @@
 /*
-Package gompcreader provides a simple method to read the Minor Planet Center data files.
+Package gompcreader provides a simple method to read the Minor Planet Center
+data files.
+
+Designed to load the files from http://www.minorplanetcenter.net/iau/MPCORB.html
+and http://www.minorplanetcenter.net/iau/ECS/MPCAT/MPCAT.html
+
+This will not read the comets files or the observations files. If you try you
+will probably find the first call to ReadEntry() returns io.EOF as it has skipped
+all the records in the file.
+
+This can handle both the gzipped and uncompressed versions of the files. If you
+need speed and don't care about space use the uncompressed versions.
+
+To read a file first construct a MpcReader using the NewMpcReader(string) function.
+This requires the path to a file.
+
+Each record is read using the ReadEntry() function. Note this may consume more
+than one line from the file if the next line is not the correct length. These
+are usually the comments at the top of the file or the blank section sperators.
+When you get to the end of the file this will return io.EOF.
+
+Finaly when you are done with the reader you should Close() it. This should
+normally be defered.
 */
 package gompcreader
 
 /**
 	TODO:
-  opposition
-  year of observations
-  arc length
   perterbers translation
 */
 
@@ -91,8 +110,9 @@ func NewMpcReader(filePath string) (*MpcReader, error) {
 }
 
 /*
-MpcReader is a simple wrapper around a bufio.Reader used to read the file. Should be constructed
-using NewMpcReader(string)
+MpcReader is a simple data structure to keep track of readers and scanners for
+reading the requested file. Should be constructed using NewMpcReader(string) and
+closed using Close() before disposal.
 */
 type MpcReader struct {
 	f *os.File
@@ -118,6 +138,8 @@ func (reader *MpcReader) ReadEntry() (*MinorPlanet, error) {
 
 /*
 Close the reader down. This will clean up the open file handle.
+
+This should be defered just after NewMpcReader has been called
 */
 func (reader *MpcReader) Close() {
 	if reader.g != nil {
@@ -259,7 +281,7 @@ Then convert the result to an int
 func readArcLength(buffer string) (int64, error) {
 	var s = readString(buffer)
 	var np = strings.SplitN(s, " ", 2)
-	if np == nil {
+	if np == nil || len(np) < 2 {
 		return 0, errors.New("Arc length didn't have enough parts")
 	}
 	return readInt(np[0])
