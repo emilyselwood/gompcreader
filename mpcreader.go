@@ -86,7 +86,7 @@ This will automatically detect if the file extension suggests a gziped version
 of the file and open it correctly.
 */
 func NewMpcReader(filePath string) (*MpcReader, error) {
-	var reader = new(MpcReader)
+	reader := new(MpcReader)
 	var err error
 	reader.f, err = os.Open(filePath)
 	if err != nil {
@@ -194,6 +194,9 @@ Reads a packed int from the buffer
 
 Packed ints encode the most significant digit using 0-9A-Za-z to cover 0 to 61
 This is used as a base for the packed identifier and the packed date.
+
+This returns an error only so it conforms to the same functional interface
+as the readInt and readHexInt which makes testing easier.
 */
 func readPackedInt(buffer string) int64 {
 	var result int64
@@ -264,7 +267,7 @@ func readPackedIdentifier(buffer string) string {
 Packed time fields are simply three packed int representing year, month and day
 */
 func readPackedTime(buffer string) time.Time {
-	var tb = readString(buffer)
+	tb := readString(buffer)
 	year := int(readPackedInt(tb[0:3]))
 	month := int(readPackedInt(tb[3:4]))
 	day := int(readPackedInt(tb[4:5]))
@@ -279,8 +282,8 @@ Then we split the string on spaces. If we didn't trim the split would include em
 Then convert the result to an int
 */
 func readArcLength(buffer string) (int64, error) {
-	var s = readString(buffer)
-	var np = strings.SplitN(s, " ", 2)
+	s := readString(buffer)
+	np := strings.SplitN(s, " ", 2)
 	if np == nil || len(np) < 2 {
 		return 0, errors.New("Arc length didn't have enough parts")
 	}
@@ -330,7 +333,7 @@ Convert a byte buffer into a minor planet. This takes apart the buffer and
 populates. The MinorPlanet struct
 */
 func convertToMinorPlanet(buffer string) (*MinorPlanet, error) {
-	var r = new(MinorPlanet)
+	r := new(MinorPlanet)
 	var err error
 
 	r.ID = readPackedIdentifier(buffer[0:7])
