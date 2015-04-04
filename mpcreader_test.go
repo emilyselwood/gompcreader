@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 type stringTestCase struct {
@@ -11,14 +13,12 @@ type stringTestCase struct {
 	out string
 }
 
-type doStringTest func(stringTestCase) (bool, string)
+type doStringTest func(string) string
 
 func stringTest(t *testing.T, n string, cases []stringTestCase, test doStringTest) {
 	for _, tt := range cases {
-		var r, a = test(tt)
-		if !r {
-			t.Errorf("%s(%s) was %s expected %s", n, tt.in, a, tt.out)
-		}
+		a := test(tt.in)
+		assert.Equal(t, tt.out, a, "%s(%s) was %s expected %s", n, tt.in, a, tt.out)
 	}
 }
 
@@ -27,18 +27,13 @@ type intTestCase struct {
 	out int64
 }
 
-type doIntTest func(intTestCase) (bool, int64, error)
+type doIntTest func(string) (int64, error)
 
 func intTest(t *testing.T, n string, cases []intTestCase, test doIntTest) {
 	for _, tt := range cases {
-		var r, a, e = test(tt)
-		if !r {
-			if e != nil {
-				t.Errorf("%s(%s) failed with %s. Expected %d", n, tt.in, e, tt.out)
-			} else {
-				t.Errorf("%s(%s) was %d expected %d", n, tt.in, a, tt.out)
-			}
-		}
+		a, e := test(tt.in)
+		assert.Nil(t, e)
+		assert.Equal(t, tt.out, a, "int not as expected")
 	}
 }
 
@@ -47,18 +42,13 @@ type floatTestCase struct {
 	out float64
 }
 
-type doFloatTest func(floatTestCase) (bool, float64, error)
+type doFloatTest func(string) (float64, error)
 
 func floatTest(t *testing.T, n string, cases []floatTestCase, test doFloatTest) {
 	for _, tt := range cases {
-		var r, a, e = test(tt)
-		if !r {
-			if e != nil {
-				t.Errorf("%s(%s) failed with %s. Expected %f", n, tt.in, e, tt.out)
-			} else {
-				t.Errorf("%s(%s) was %f expected %f", n, tt.in, a, tt.out)
-			}
-		}
+		var a, e = test(tt.in)
+		assert.Nil(t, e)
+		assert.Equal(t, tt.out, a, "%s(%s) was %f expected %f", n, tt.in, a, tt.out)
 	}
 }
 
@@ -74,10 +64,7 @@ func TestReadString(t *testing.T) {
 	stringTest(t,
 		"readString",
 		readStringTests,
-		func(t stringTestCase) (bool, string) {
-			var r = readString(t.in)
-			return r == t.out, r
-		})
+		readString)
 }
 
 var readFloatTests = []floatTestCase{
@@ -91,10 +78,7 @@ func TestReadFloat(t *testing.T) {
 	floatTest(t,
 		"readFloat",
 		readFloatTests,
-		func(c floatTestCase) (bool, float64, error) {
-			var r, e = readFloat(c.in)
-			return e == nil && r == c.out, r, e
-		})
+		readFloat)
 }
 
 var errorFloatTests = []stringTestCase{
@@ -107,12 +91,12 @@ func TestErrorReadFloat(t *testing.T) {
 	stringTest(t,
 		"readFloat",
 		errorFloatTests,
-		func(c stringTestCase) (bool, string) {
-			var r, e = readFloat(c.in)
+		func(c string) string {
+			var r, e = readFloat(c)
 			if e == nil {
-				return false, fmt.Sprintf("%f", r)
+				return fmt.Sprintf("%f", r)
 			}
-			return e.Error() == c.out, e.Error()
+			return e.Error()
 		})
 }
 
@@ -126,10 +110,7 @@ func TestReadInt(t *testing.T) {
 	intTest(t,
 		"readInt",
 		readIntTests,
-		func(t intTestCase) (bool, int64, error) {
-			var r, e = readInt(t.in)
-			return e == nil && r == t.out, r, e
-		})
+		readInt)
 }
 
 var errorIntTests = []stringTestCase{
@@ -143,12 +124,12 @@ func TestReadIntErrors(t *testing.T) {
 	stringTest(t,
 		"readInt",
 		errorIntTests,
-		func(c stringTestCase) (bool, string) {
-			var r, e = readInt(c.in)
+		func(c string) string {
+			var r, e = readInt(c)
 			if e == nil {
-				return false, fmt.Sprintf("%d", r)
+				return fmt.Sprintf("%d", r)
 			}
-			return e.Error() == c.out, e.Error()
+			return e.Error()
 		})
 }
 
@@ -164,10 +145,7 @@ func TestReadHexInt(t *testing.T) {
 	intTest(t,
 		"readHexInt",
 		readHexIntTests,
-		func(t intTestCase) (bool, int64, error) {
-			var r, e = readHexInt(t.in)
-			return e == nil && r == t.out, r, e
-		})
+		readHexInt)
 }
 
 var errorHexIntTests = []stringTestCase{
@@ -181,12 +159,12 @@ func TestReadHexIntErrors(t *testing.T) {
 	stringTest(t,
 		"readHexInt",
 		errorHexIntTests,
-		func(c stringTestCase) (bool, string) {
-			var r, e = readHexInt(c.in)
+		func(c string) string {
+			var r, e = readHexInt(c)
 			if e == nil {
-				return false, fmt.Sprintf("%d", r)
+				return fmt.Sprintf("%d", r)
 			}
-			return e.Error() == c.out, e.Error()
+			return e.Error()
 		})
 }
 
@@ -204,9 +182,9 @@ func TestReadPackedInt(t *testing.T) {
 	intTest(t,
 		"readPackedInt",
 		readPackedIntTests,
-		func(t intTestCase) (bool, int64, error) {
-			var r = readPackedInt(t.in)
-			return r == t.out, r, nil
+		func(t string) (int64, error) {
+			var r = readPackedInt(t)
+			return r, nil
 		})
 }
 
@@ -223,10 +201,7 @@ func TestReadPackedIdentifier(t *testing.T) {
 	stringTest(t,
 		"readPackedIdentifier",
 		packedIdentifierTests,
-		func(c stringTestCase) (bool, string) {
-			var r = readPackedIdentifier(c.in)
-			return r == c.out, r
-		})
+		readPackedIdentifier)
 }
 
 var arcLengthTests = []intTestCase{
@@ -238,10 +213,7 @@ func TestArcLength(t *testing.T) {
 	intTest(t,
 		"readArcLength",
 		arcLengthTests,
-		func(c intTestCase) (bool, int64, error) {
-			var r, e = readArcLength(c.in)
-			return e == nil && r == c.out, r, e
-		})
+		readArcLength)
 }
 
 var arcLengthErrorTests = []stringTestCase{
@@ -254,9 +226,9 @@ func TestArcLengthErrors(t *testing.T) {
 	stringTest(t,
 		"readArcLength",
 		arcLengthErrorTests,
-		func(c stringTestCase) (bool, string) {
-			_, e := readArcLength(c.in)
-			return e.Error() == c.out, e.Error()
+		func(c string) string {
+			_, e := readArcLength(c)
+			return e.Error()
 		})
 }
 
@@ -311,41 +283,45 @@ func TestReadDate(t *testing.T) {
 func TestConvertCeres(t *testing.T) {
 	var entry = "00001    3.34  0.12 K13B4  10.55761   72.29213   80.32762   10.59398  0.0757973  0.21415869   2.7668073  0 MPO286777  6502 105 1802-2014 0.82 M-v 30h MPCLINUX   0000      (1) Ceres              20140307"
 	var result, err = convertToMinorPlanet(entry)
-	if err != nil {
-		t.Fatalf("convertToMinorPlanet returned an error %s", err)
-	}
-	if result.ID != "1" {
-		t.Errorf("convertToMinorPlanet ID %s expected 1", result.ID)
-	}
+	assert.Nil(t, err, "convertToMinorPlanet returned an error %s", err)
 
-	if result.ReadableDesignation != "(1) Ceres" {
-		t.Errorf("convertToMinorPlanet ReadableDesignation %s expected 1",
-			result.ReadableDesignation)
-	}
+	assert.Equal(t,
+		"1",
+		result.ID,
+		"convertToMinorPlanet ID %s expected 1",
+		result.ID)
 
-	var expected = time.Date(2014, time.March, 7, 0, 0, 0, 0, time.UTC)
+	assert.Equal(t,
+		"(1) Ceres",
+		result.ReadableDesignation,
+		"convertToMinorPlanet ReadableDesignation %s expected (1) Ceres",
+		result.ReadableDesignation)
 
-	if !expected.Equal(result.DateOfLastObservation) {
-		t.Errorf("convertToMinorPlanet DateOfLastObservation %s expected %s",
-			result.DateOfLastObservation.Format("2006-01-02T15:04:00 -0700"),
-			expected.Format("2006-01-02T15:04:00 -0700"))
-	}
+	expected := time.Date(2014, time.March, 7, 0, 0, 0, 0, time.UTC)
+	assert.Equal(t,
+		expected,
+		result.DateOfLastObservation,
+		"convertToMinorPlanet DateOfLastObservation %s expected %s",
+		result.DateOfLastObservation.Format("2006-01-02T15:04:00 -0700"),
+		expected.Format("2006-01-02T15:04:00 -0700"))
 
-	if result.ArcLength != 0 {
-		t.Errorf("convertToMinorPlanet ArcLength %s expected 0",
-			result.ArcLength)
-	}
+	assert.Equal(t,
+		0,
+		result.ArcLength,
+		"convertToMinorPlanet ReadableDesignation %s expected 0",
+		result.ArcLength)
 
-	if result.YearOfFirstObservation != 1802 {
-		t.Errorf("convertToMinorPlanet YearOfFirstObservation %s expected 1802",
-			result.YearOfFirstObservation)
-	}
+	assert.Equal(t,
+		1802,
+		result.YearOfFirstObservation,
+		"convertToMinorPlanet YearOfFirstObservation %s expected 1802",
+		result.YearOfFirstObservation)
 
-	if result.YearOfLastObservation != 2014 {
-		t.Errorf("convertToMinorPlanet YearOfLastObservation %s expected 2014",
-			result.YearOfLastObservation)
-	}
-
+	assert.Equal(t,
+		2014,
+		result.YearOfLastObservation,
+		"convertToMinorPlanet YearOfLastObservation %s expected 2014",
+		result.YearOfLastObservation)
 }
 
 func TestConvertT3S5154(t *testing.T) {
@@ -403,8 +379,8 @@ func TestConverErrors(t *testing.T) {
 	stringTest(t,
 		"convertToMinorPlanet",
 		convertErrorsTests,
-		func(c stringTestCase) (bool, string) {
-			var _, e = convertToMinorPlanet(c.in)
-			return e.Error() == c.out, e.Error()
+		func(c string) string {
+			var _, e = convertToMinorPlanet(c)
+			return e.Error()
 		})
 }
