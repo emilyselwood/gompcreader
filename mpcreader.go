@@ -86,7 +86,7 @@ This will automatically detect if the file extension suggests a gziped version
 of the file and open it correctly.
 */
 func NewMpcReader(filePath string) (*MpcReader, error) {
-	reader := new(MpcReader)
+	var reader MpcReader
 	var err error
 	reader.f, err = os.Open(filePath)
 	if err != nil {
@@ -105,7 +105,7 @@ func NewMpcReader(filePath string) (*MpcReader, error) {
 		reader.s = bufio.NewScanner(reader.f)
 	}
 
-	return reader, nil
+	return &reader, nil
 
 }
 
@@ -330,7 +330,7 @@ Convert a byte buffer into a minor planet. This takes apart the buffer and
 populates. The MinorPlanet struct
 */
 func convertToMinorPlanet(buffer string) (*MinorPlanet, error) {
-	r := new(MinorPlanet)
+	var r MinorPlanet
 	var err error
 
 	r.ID = readPackedIdentifier(buffer[0:7])
@@ -420,5 +420,5 @@ func convertToMinorPlanet(buffer string) (*MinorPlanet, error) {
 		return nil, err
 	}
 
-	return r, nil
+	return &r, nil
 }
