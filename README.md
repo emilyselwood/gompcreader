@@ -1,8 +1,8 @@
 # Minor Planet Center Reader #
 
 [![Build Status](https://travis-ci.org/wselwood/gompcreader.svg?branch=master)](https://travis-ci.org/wselwood/gompcreader)
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/wselwood/gompcreader/blob/master/LICENSE.md)
-[![Docs](https://img.shields.io/badge/docs-godoc.org-blue.svg)](https://godoc.org/github.com/wselwood/gompcreader)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/emilyselwood/gompcreader/blob/master/LICENSE.md)
+[![Docs](https://img.shields.io/badge/docs-godoc.org-blue.svg)](https://godoc.org/github.com/emilyselwood/gompcreader)
 
 ## Overview ##
 
@@ -23,7 +23,7 @@ import (
 	"io"
 	"log"
 
-	"github.com/wselwood/gompcreader"
+	"github.com/emilyselwood/gompcreader"
 )
 
 var inputfile = flag.String("in", "", "the minor planet center file to read")

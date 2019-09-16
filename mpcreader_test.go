@@ -306,19 +306,19 @@ func TestConvertCeres(t *testing.T) {
 		expected.Format("2006-01-02T15:04:00 -0700"))
 
 	assert.Equal(t,
-		0,
+		int64(0),
 		result.ArcLength,
 		"convertToMinorPlanet ReadableDesignation %s expected 0",
 		result.ArcLength)
 
 	assert.Equal(t,
-		1802,
+		int64(1802),
 		result.YearOfFirstObservation,
 		"convertToMinorPlanet YearOfFirstObservation %s expected 1802",
 		result.YearOfFirstObservation)
 
 	assert.Equal(t,
-		2014,
+		int64(2014),
 		result.YearOfLastObservation,
 		"convertToMinorPlanet YearOfLastObservation %s expected 2014",
 		result.YearOfLastObservation)
@@ -348,17 +348,17 @@ func TestConvertT3S5154(t *testing.T) {
 	}
 
 	if result.ArcLength != 6 {
-		t.Errorf("convertToMinorPlanet ArcLength %s expected 6",
+		t.Errorf("convertToMinorPlanet ArcLength %v expected 6",
 			result.ArcLength)
 	}
 
 	if result.YearOfFirstObservation != 0 {
-		t.Errorf("convertToMinorPlanet YearOfFirstObservation %s expected 0",
+		t.Errorf("convertToMinorPlanet YearOfFirstObservation %v expected 0",
 			result.YearOfFirstObservation)
 	}
 
 	if result.YearOfLastObservation != 0 {
-		t.Errorf("convertToMinorPlanet YearOfLastObservation %s expected 0",
+		t.Errorf("convertToMinorPlanet YearOfLastObservation %v expected 0",
 			result.YearOfLastObservation)
 	}
 
