@@ -280,6 +280,9 @@ Then convert the result to an int
 */
 func readArcLength(buffer string) (int64, error) {
 	s := readString(buffer)
+	if s[4] == '-' {
+		return 0, nil
+	}
 	np := strings.SplitN(s, " ", 2)
 	if np == nil || len(np) < 2 {
 		return 0, errors.New("Arc length didn't have enough parts")
